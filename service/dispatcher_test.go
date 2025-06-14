@@ -67,6 +67,7 @@ func TestDispatcher_Start(t *testing.T) {
 	mockClient.On("GetUsers").Return(users, nil)
 	mockClient.On("PostUser", users[0]).Return(nil)
 	mockLogger.On("Println", mock.Anything).Twice()
+	mockLogger.On("Info", mock.Anything).Once()
 
 	d := service.NewDispatcher(mockClient, mockLogger, cfg)
 	err := d.Start()

@@ -38,7 +38,7 @@ func (d *dispatcher) Start() error {
 	for _, user := range users {
 		if !model.UserEmailHasSpecialPostfix(&user, d.cfg.ExcludePostfixes) {
 			err := fmt.Errorf(infoSkipping, user.Email)
-			d.logger.Println(apperrors.ServiceDispatcherSkippingUserEmailWithSpecialPostfix.AppendMessage(err))
+			fmt.Println(err.Error())
 			continue
 		}
 		if !user.IsValid() {
