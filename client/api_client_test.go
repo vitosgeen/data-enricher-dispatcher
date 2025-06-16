@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -55,7 +56,8 @@ func Test_apiClient_GetUsers(t *testing.T) {
 				GetUsersURL: server.URL,
 			})
 
-			users, err := client.GetUsers()
+			ctx, _ := context.WithTimeout(context.Background(), defaultTimeout)
+			users, err := client.GetUsers(ctx)
 			if err != nil {
 				if err.Error() != tc.expectedErr {
 					t.Errorf("expected error %q, got %q", tc.expectedErr, err.Error())
@@ -118,8 +120,9 @@ func Test_apiClient_PostUser(t *testing.T) {
 			client := NewAPIClient(&config.Config{
 				PostUsersURL: server.URL,
 			})
-
-			err := client.PostUser(tc.mockUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
+			err := client.PostUser(ctx, tc.mockUsers)
 			if err != nil {
 				if err.Error() != tc.expectedErr {
 					t.Errorf("expected error %q, got %q", tc.expectedErr, err.Error())

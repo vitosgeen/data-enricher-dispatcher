@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"data-enricher-dispatcher/apperrors"
 	"data-enricher-dispatcher/client"
@@ -10,10 +12,13 @@ import (
 	"data-enricher-dispatcher/model"
 )
 
-const infoSkipping = "skipping user with email: %s due to special postfix exclusion"
+const (
+	defaultTimeout = 10 * time.Second
+	infoSkipping   = "skipping user with email: %s due to special postfix exclusion"
+)
 
 type Dispatcher interface {
-	Start() error
+	Start(ctx context.Context) error
 }
 
 type dispatcher struct {
@@ -30,14 +35,19 @@ func NewDispatcher(apiClient client.APIClient, logger logger.Logger, cfg *config
 	}
 }
 
-func (d *dispatcher) Start() error {
-	users, err := d.apiClient.GetUsers()
+func (d *dispatcher) Start(ctx context.Context) error {
+	userCtx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+
+	users, err := d.apiClient.GetUsers(userCtx)
 	if err != nil {
 		return apperrors.ServiceDispatcherGetUsersError.AppendMessage(err)
 	}
 	for _, user := range users {
 		if !model.UserEmailHasSpecialPostfix(&user, d.cfg.ExcludePostfixes) {
 			err := fmt.Errorf(infoSkipping, user.Email)
+			d.logger.Info(err.Error())
+			// show to the console
 			fmt.Println(err.Error())
 			continue
 		}
@@ -46,7 +56,9 @@ func (d *dispatcher) Start() error {
 			continue
 		}
 
-		err := d.apiClient.PostUser(user)
+		postUserCtx, postCancel := context.WithTimeout(ctx, defaultTimeout)
+		defer postCancel()
+		err := d.apiClient.PostUser(postUserCtx, user)
 		if err != nil {
 			d.logger.Error(apperrors.ServiceDispatcherPostUserError.AppendMessage(err, user))
 		}

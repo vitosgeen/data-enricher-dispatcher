@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,8 +22,8 @@ const (
 )
 
 type APIClient interface {
-	GetUsers() ([]model.User, error)
-	PostUser(user model.User) error
+	GetUsers(ctx context.Context) ([]model.User, error)
+	PostUser(ctx context.Context, user model.User) error
 }
 type apiClient struct {
 	client      *http.Client
@@ -38,7 +39,7 @@ func NewAPIClient(cfg *config.Config) APIClient {
 	}
 }
 
-func (c *apiClient) GetUsers() ([]model.User, error) {
+func (c *apiClient) GetUsers(ctx context.Context) ([]model.User, error) {
 	var users []model.User
 	for i := 0; i < defaultAttempts; i++ {
 		resp, err := c.client.Get(c.getUsersUrl)
@@ -82,7 +83,7 @@ func (c *apiClient) GetUsers() ([]model.User, error) {
 	return nil, apperrors.ApiClientGetUsersAttemptsExceededError.AppendMessage(fmt.Errorf(failedGetUsersError, defaultAttempts))
 }
 
-func (c *apiClient) PostUser(user model.User) error {
+func (c *apiClient) PostUser(ctx context.Context, user model.User) error {
 	if !user.IsValid() {
 		return apperrors.ApiClientPostUserIsValidError.AppendMessage(fmt.Errorf("invalid user: %v", user))
 	}

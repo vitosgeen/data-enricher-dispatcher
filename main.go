@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"data-enricher-dispatcher/client"
 	"data-enricher-dispatcher/config"
 	"data-enricher-dispatcher/logger"
@@ -20,8 +22,9 @@ func main() {
 
 	apiClient := client.NewAPIClientV2(cfg)
 
+	ctx := context.Background()
 	dispatcher := service.NewDispatcher(apiClient, logger, cfg)
-	if err := dispatcher.Start(); err != nil {
+	if err := dispatcher.Start(ctx); err != nil {
 		logger.Fatal("Failed to start dispatcher:", err)
 	}
 }

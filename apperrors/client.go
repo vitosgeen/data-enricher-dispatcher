@@ -8,6 +8,11 @@ var (
 		Code:     "API_CLIENT_GET_USERS_ERROR",
 		HTTPCode: http.StatusInternalServerError,
 	}
+	ApiClientGetUsersRequestError = &AppError{
+		Message:  "Failed to create request for getting users from API",
+		Code:     "API_CLIENT_GET_USERS_REQUEST_ERROR",
+		HTTPCode: http.StatusInternalServerError,
+	}
 	ApiClientGetUsersCloseBodyError = &AppError{
 		Message:  "Failed to close response body from API",
 		Code:     "API_CLIENT_GET_USERS_CLOSE_BODY_ERROR",

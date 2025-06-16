@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -24,10 +25,11 @@ func TestApiClientV2_GetUsers(t *testing.T) {
 			expectedErr: "",
 		},
 		{
-			name:        "empty response body",
-			mockUsers:   []model.User{},
-			statusCode:  http.StatusOK,
-			expectedErr: "empty response body length: 0",
+			name:       "empty response body",
+			mockUsers:  []model.User{},
+			statusCode: http.StatusOK,
+			expectedErr: apperrors.ApiClientGetUsersEmptyResponseError.AppendMessage(
+				fmt.Errorf("empty response body length: 0")).Error(),
 		},
 		{
 			name:       "unexpected status code",
@@ -52,8 +54,9 @@ func TestApiClientV2_GetUsers(t *testing.T) {
 			client := NewAPIClientV2(&config.Config{
 				GetUsersURL: server.URL,
 			})
-
-			users, err := client.GetUsers()
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
+			users, err := client.GetUsers(ctx)
 			if err != nil {
 				if err.Error() != tc.expectedErr {
 					t.Errorf("expected error %q, got %q", tc.expectedErr, err.Error())
@@ -117,7 +120,9 @@ func Test_apiClientV2_PostUser(t *testing.T) {
 				PostUsersURL: server.URL,
 			})
 
-			err := client.PostUser(tc.mockUsers)
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
+			err := client.PostUser(ctx, tc.mockUsers)
 			if err != nil {
 				if err.Error() != tc.expectedErr {
 					t.Errorf("expected error %q, got %q", tc.expectedErr, err.Error())

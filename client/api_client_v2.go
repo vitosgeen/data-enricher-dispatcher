@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"time"
 
@@ -36,10 +35,25 @@ func NewAPIClientV2(cfg *config.Config) APIClient {
 	}
 }
 
-func (c *apiClientV2) GetUsers() ([]model.User, error) {
-	resp, err := c.client.Get(c.getUsersUrl)
+func (c *apiClientV2) GetUsers(ctx context.Context) ([]model.User, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.getUsersUrl, nil)
+	if err != nil {
+		return nil, apperrors.ApiClientGetUsersRequestError.AppendMessage(err)
+	}
+
+	resp, err := c.client.Do(req)
+	if resp.StatusCode != http.StatusOK {
+		err = fmt.Errorf(unexpectedStatusCodeError, resp.StatusCode)
+		return nil, apperrors.ApiClientGetUsersStatusCodeNotOkError.AppendMessage(err)
+	}
 	if err != nil {
 		return nil, apperrors.ApiClientGetUsersGetError.AppendMessage(err)
+	}
+
+	var users []model.User
+	err = json.NewDecoder(resp.Body).Decode(&users)
+	if err != nil {
+		return nil, apperrors.ApiClientGetUsersUnmarshalError.AppendMessage(err)
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -47,31 +61,14 @@ func (c *apiClientV2) GetUsers() ([]model.User, error) {
 			return
 		}
 	}()
-
-	if resp.StatusCode != http.StatusOK {
-		err = fmt.Errorf(unexpectedStatusCodeError, resp.StatusCode)
-		return nil, apperrors.ApiClientGetUsersStatusCodeNotOkError.AppendMessage(err)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, apperrors.ApiClientGetUsersReadAllError.AppendMessage(err)
-	}
-	if len(body) == 0 {
-		err = fmt.Errorf(emptyResponseError, len(body))
-		return nil, apperrors.ApiClientGetUsersEmptyResponseError.AppendMessage(err)
-	}
-
-	var users []model.User
-	err = json.Unmarshal(body, &users)
-	if err != nil {
-		return nil, apperrors.ApiClientGetUsersUnmarshalError.AppendMessage(err)
+	if len(users) == 0 {
+		return nil, apperrors.ApiClientGetUsersEmptyResponseError.AppendMessage(fmt.Errorf(emptyResponseError, 0))
 	}
 
 	return users, nil
 }
 
-func (c *apiClientV2) PostUser(user model.User) error {
+func (c *apiClientV2) PostUser(ctx context.Context, user model.User) error {
 	if !user.IsValid() {
 		return apperrors.ApiClientPostUserIsValidError.AppendMessage(fmt.Errorf(invalidUserError, user))
 	}
@@ -80,7 +77,7 @@ func (c *apiClientV2) PostUser(user model.User) error {
 		return apperrors.ApiClientPostUserMarshalError.AppendMessage(err)
 	}
 	userDataBuffer := bytes.NewBuffer(userData)
-	resp, err := makePostRequestWithRetry(context.Background(), http.MethodPost, c.postUserUrl, "application/json", defaultAttempts, userDataBuffer, defaultTimeout)
+	resp, err := makePostRequestWithRetry(ctx, http.MethodPost, c.postUserUrl, "application/json", defaultAttempts, userDataBuffer, defaultTimeout)
 	if err != nil {
 		return apperrors.ApiClientPostUserPostError.AppendMessage(err)
 	}
