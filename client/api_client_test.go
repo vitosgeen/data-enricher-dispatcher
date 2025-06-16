@@ -56,7 +56,8 @@ func Test_apiClient_GetUsers(t *testing.T) {
 				GetUsersURL: server.URL,
 			})
 
-			ctx, _ := context.WithTimeout(context.Background(), defaultTimeout)
+			ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+			defer cancel()
 			users, err := client.GetUsers(ctx)
 			if err != nil {
 				if err.Error() != tc.expectedErr {
