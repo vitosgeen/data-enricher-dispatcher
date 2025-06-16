@@ -47,8 +47,6 @@ func (d *dispatcher) Start(ctx context.Context) error {
 		if !model.UserEmailHasSpecialPostfix(&user, d.cfg.ExcludePostfixes) {
 			err := fmt.Errorf(infoSkipping, user.Email)
 			d.logger.Info(err.Error())
-			// show to the console
-			fmt.Println(err.Error())
 			continue
 		}
 		if !user.IsValid() {
